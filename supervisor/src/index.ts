@@ -19,7 +19,12 @@ import { environmentFor } from "./environment";
 import { registerEntry } from "./identity";
 import { listenPort } from "./listen-port";
 import { legacyNamesFor, namesFor } from "./names";
-import { beforeEnsure, NotEnoughMemoryError, startIdleReaper } from "./novabot-limits";
+import {
+  beforeEnsure,
+  ComputerCapacityError,
+  NotEnoughMemoryError,
+  startIdleReaper,
+} from "./novabot-limits";
 
 /**
  * The container supervisor: the only thing here that holds the Docker socket.
@@ -142,10 +147,12 @@ app.post("/computers/:kind/:id/ensure", async (context) => {
     );
   }
 
+  let releaseSlot: (() => void) | undefined;
   try {
+    // Reserve capacity before Docker starts, keeping the slot until ensure completes.
+    releaseSlot = await beforeEnsure(parsed.names.kind, parsed.names.id);
     // Registered before the computer is handed out, so it can prove whose it is from its first
     // request.
-    await beforeEnsure(parsed.names.kind, parsed.names.id);
     const identity = await registerEntry(parsed.names);
 
     const state = await ensure(parsed.names, {
@@ -178,7 +185,10 @@ app.post("/computers/:kind/:id/ensure", async (context) => {
   } catch (error) {
     // A held name is not an outage. 409 says the conflict is with something already there, so an
     // operator reads the message rather than going to look at a daemon that is working.
-    if (error instanceof NotEnoughMemoryError) {
+    if (
+      error instanceof NotEnoughMemoryError ||
+      error instanceof ComputerCapacityError
+    ) {
       return context.json({ error: error.message }, 503);
     }
     if (error instanceof NameHeldError) {
@@ -195,6 +205,8 @@ app.post("/computers/:kind/:id/ensure", async (context) => {
       return context.json({ error: error.message, starting: true }, 503);
     }
     throw error;
+  } finally {
+    releaseSlot?.();
   }
 });
 

@@ -144,6 +144,8 @@ import { createRoutingRoutes } from "./routing/routes";
 import { createCoworkerRoutingService } from "./routing/service";
 import type { SelfHostBanner } from "./self-host-banner";
 import { createTeamBotRoutes } from "./team-bots/routes";
+import { createSharedResourceRoutes } from "./novabot-resources/routes";
+import type { SharedResourceStore } from "./novabot-resources/store";
 import type { TeamBots } from "./team-bots/team-bots";
 import type { PackageStatusReader } from "./tenant-package";
 import {
@@ -459,6 +461,8 @@ export function createApp(
     };
     groups?: GroupConversations;
     teamBots?: TeamBots;
+    /** Owner-scoped text resources, with explicit grants for each Bot. */
+    resources?: SharedResourceStore;
     /** Pause, reset, Activity and attention for a person's own Bots. See agents/lifecycle.ts. */
     lifecycle?: BotLifecycleServices;
   },
@@ -1675,6 +1679,23 @@ export function createApp(
     );
   if (coworker?.groups)
     app.route("/api/groups", createGroupRoutes(coworker.groups, requireUser));
+  if (coworker?.resources && agentProfileStore)
+    app.route(
+      "/api/shared-resources",
+      createSharedResourceRoutes(
+        coworker.resources,
+        requireUser,
+        async (actor, botId) => {
+          const bot = await agentProfileStore.get(actor, botId);
+          // Never grant a shared public Bot access to the owner's private
+          // documents. Only their own Bot or a deployment-managed Bot.
+          return Boolean(
+            bot && (bot.systemOwned || bot.ownerUserId === actor.id),
+          );
+        },
+        auditStore,
+      ),
+    );
   if (coworker?.teamBots)
     app.route(
       "/api/team-bots",

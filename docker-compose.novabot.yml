@@ -1,4 +1,4 @@
-name: novabot
+name: ${NOVABOT_PROJECT_NAME:-novabot}
 services:
   postgres:
     image: pgvector/pgvector:pg17
@@ -14,7 +14,7 @@ services:
       context: .
       dockerfile: server/Dockerfile
       args: {TENANT_PACKAGE_DIR: ../examples/novagente}
-    image: novabot-server:latest
+    image: ${NOVABOT_PROJECT_NAME:-novabot}-server:latest
     command: ["bun","scripts/migrate.ts"]
     environment: {DATABASE_URL: "postgres://openbot:${PG_PASSWORD}@postgres:5432/openbot"}
     depends_on: {postgres: {condition: service_healthy}}
@@ -22,8 +22,8 @@ services:
     mem_limit: 256m
     networks: [data]
   server:
-    image: novabot-server:latest
-    env_file: [.env]
+    image: ${NOVABOT_PROJECT_NAME:-novabot}-server:latest
+    env_file: ["${NOVABOT_ENV_FILE:-.env}"]
     environment:
       PORT: "3001"
       SERVER_PORT: "3001"
@@ -40,8 +40,8 @@ services:
       NOVABOT_ISOLATE_EVERY_BOT: "true"
       COMPUTER_SUPERVISOR_URL: http://supervisor:4300
     user: "1001:1001"
-    volumes: ["./.openbot:/openbot"]
-    ports: ["127.0.0.1:13010:3001"]
+    volumes: ["${NOVABOT_DATA_DIR:-./.openbot}:/openbot"]
+    ports: ["127.0.0.1:${NOVABOT_HOST_PORT:-13010}:3001"]
     depends_on: {migrate: {condition: service_completed_successfully}}
     restart: unless-stopped
     mem_limit: 640m
@@ -52,7 +52,7 @@ services:
       retries: 5
     networks: [data, default]
   worker:
-    image: novabot-server:latest
+    image: ${NOVABOT_PROJECT_NAME:-novabot}-server:latest
     command: ["bun","../worker/src/index.ts"]
     environment:
       DATABASE_URL: "postgres://openbot:${PG_PASSWORD}@postgres:5432/openbot"
@@ -64,7 +64,7 @@ services:
     networks: [data]
   agent-bot:
     build: {context: ., dockerfile: agent-bot/Dockerfile}
-    image: novabot-agent-bot:latest
+    image: ${NOVABOT_PROJECT_NAME:-novabot}-agent-bot:latest
     environment:
       OPENAI_API_KEY: "${OPENAI_API_KEY}"
       OPENAI_BASE_URL: https://api.deepseek.com
@@ -75,7 +75,7 @@ services:
     networks: [default]
   embed:
     build: {context: embed}
-    image: novabot-embed:latest
+    image: ${NOVABOT_PROJECT_NAME:-novabot}-embed:latest
     restart: unless-stopped
     mem_limit: 512m
     healthcheck:
@@ -86,22 +86,22 @@ services:
     networks: [data]
   supervisor:
     build: {context: ., dockerfile: supervisor/Dockerfile}
-    image: novabot-supervisor:latest
+    image: ${NOVABOT_PROJECT_NAME:-novabot}-supervisor:latest
     environment:
       SUPERVISOR_TOKEN: "${SUPERVISOR_TOKEN}"
       COMPUTER_TOKEN: "${COMPUTER_TOKEN}"
-      COMPUTER_IMAGE: novabot-agent-computer:latest
-      COMPUTER_NETWORK: novabot_default
-      COMPUTER_NAMESPACE: novabot
+      COMPUTER_IMAGE: ${NOVABOT_PROJECT_NAME:-novabot}-agent-computer:latest
+      COMPUTER_NETWORK: ${NOVABOT_PROJECT_NAME:-novabot}_default
+      COMPUTER_NAMESPACE: ${NOVABOT_PROJECT_NAME:-novabot}
       COMPUTER_MEMORY_BYTES: "671088640"
-      NOVABOT_MAX_COMPUTERS: "1"
-      NOVABOT_MIN_AVAILABLE_MB: "3072"
-      NOVABOT_COMPUTER_IDLE_MINUTES: "15"
+      NOVABOT_MAX_COMPUTERS: "${NOVABOT_MAX_COMPUTERS:-1}"
+      NOVABOT_MIN_AVAILABLE_MB: "${NOVABOT_MIN_AVAILABLE_MB:-3072}"
+      NOVABOT_COMPUTER_IDLE_MINUTES: "${NOVABOT_COMPUTER_IDLE_MINUTES:-15}"
     volumes: ["/var/run/docker.sock:/var/run/docker.sock"]
     restart: unless-stopped
     mem_limit: 96m
     networks: [default]
-# Running total (migrate is one-shot): 320+640+160+128+512+96 = 1856 MB, plus at most ONE computer
-# of 640 MB = 2496 MB.
+# Per-deployment memory caps (migrate is one-shot): 1856 MB baseline + up to
+# NOVABOT_MAX_COMPUTERS * 640 MB. Defaults to one computer on an unchanged VPS.
 networks: {data: {internal: true}, default: {}}
 volumes: {pgdata: {}}

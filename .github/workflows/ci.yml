@@ -146,6 +146,10 @@ jobs:
         working-directory: ${{ matrix.package }}
       - run: bun run typecheck
         working-directory: ${{ matrix.package }}
+      - name: NovaBot computer capacity (supervisor)
+        if: matrix.package == 'supervisor'
+        run: bun test tests/novabot-capacity.test.ts
+        working-directory: supervisor
 
   mobile:
     needs: scope
@@ -568,6 +572,8 @@ jobs:
           python -m pytest agent-microsoft/tests -q
       - run: bun install --frozen-lockfile
       - run: bun test tests/compose.test.ts
+      - name: NovaBot separate customer Compose configurations
+        run: bun test tests/novabot-tenant-compose.test.ts
       - run: docker compose --env-file /dev/null --profile harness config --format json >/dev/null
         env:
           PICKED_HARNESS_IMAGE: openbot-agent-langgraph-agui:test
