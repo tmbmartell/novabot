@@ -130,7 +130,9 @@ export async function startHandoffDelivery(deps: {
       // NovaBot: local mode hands off on the shared Postgres runner.
       runner: (isLocalRuntime()
         ? localRunner()
-        : new IntelligenceAgentRunner(copilotRuntime.runnerConnection())) as never,
+        : new IntelligenceAgentRunner(
+            copilotRuntime.runnerConnection(),
+          )) as never,
     }),
   });
 

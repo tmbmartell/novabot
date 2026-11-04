@@ -6,7 +6,9 @@
  * CopilotKit runtime runs in its self-hosted SSE mode, and every place that held an Intelligence
  * client holds the Postgres-backed stand-in from `local-intelligence.ts` instead.
  */
-export function isLocalRuntime(env: Record<string, string | undefined> = process.env): boolean {
+export function isLocalRuntime(
+  env: Record<string, string | undefined> = process.env,
+): boolean {
   const value = env.NOVABOT_LOCAL_RUNTIME?.trim().toLowerCase();
   return value === "true" || value === "1";
 }

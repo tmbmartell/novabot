@@ -119,8 +119,8 @@ async function oneTurn(
 }
 
 describe("a built-in Bot behind a gateway in front of OpenAI", () => {
-  test("on the package's own model, gpt-5.6-terra, it answers through the Responses API", async () => {
-    const turn = await oneTurn();
+  test("on the explicitly selected gpt-5.6-terra model, it answers through the Responses API", async () => {
+    const turn = await oneTurn({ model: "gpt-5.6-terra" });
     expect(turn.model).toBe("gpt-5.6-terra");
     expect(turn.failure).toBeUndefined();
     expect(turn.requests).toEqual([

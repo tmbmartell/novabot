@@ -37,7 +37,11 @@ type Thread = {
 
 const created = new Map<string, Thread>();
 function unavailable(what: string): never {
-  throw new PlatformRequestError(`${what} is not available in NovaBot local mode.`, 503, false);
+  throw new PlatformRequestError(
+    `${what} is not available in NovaBot local mode.`,
+    503,
+    false,
+  );
 }
 
 function threadSummary(threadId: string, userId: string): Thread | undefined {
@@ -45,7 +49,9 @@ function threadSummary(threadId: string, userId: string): Thread | undefined {
   if (store) {
     if (store.ownerId && userId && store.ownerId !== userId) return undefined;
     const last = store.historicRuns.at(-1);
-    const at = new Date(last?.createdAt ?? store.createdAt ?? Date.now()).toISOString();
+    const at = new Date(
+      last?.createdAt ?? store.createdAt ?? Date.now(),
+    ).toISOString();
     return {
       id: threadId,
       name: created.get(threadId)?.name ?? null,
@@ -69,8 +75,13 @@ export function createLocalIntelligence(): CopilotKitIntelligence {
     async getThread(params: { threadId: string; userId: string }) {
       await runner.hydrated;
       const thread = threadSummary(params.threadId, params.userId);
-      if (!thread) throw new PlatformRequestError("Thread not found", 404, false);
-      return { ...thread, lastRunAt: thread.updatedAt, lastUpdatedAt: thread.updatedAt };
+      if (!thread)
+        throw new PlatformRequestError("Thread not found", 404, false);
+      return {
+        ...thread,
+        lastRunAt: thread.updatedAt,
+        lastUpdatedAt: thread.updatedAt,
+      };
     },
     async getOrCreateThread(params: {
       threadId: string;
@@ -82,7 +93,11 @@ export function createLocalIntelligence(): CopilotKitIntelligence {
       const existing = threadSummary(params.threadId, params.userId);
       if (existing) return { thread: existing, created: false };
       if (ɵGLOBAL_STORE.peek(params.threadId))
-        throw new PlatformRequestError("Thread belongs to someone else", 403, false);
+        throw new PlatformRequestError(
+          "Thread belongs to someone else",
+          403,
+          false,
+        );
       const now = new Date().toISOString();
       const thread: Thread = {
         id: params.threadId,
@@ -95,15 +110,28 @@ export function createLocalIntelligence(): CopilotKitIntelligence {
       created.set(params.threadId, thread);
       return { thread, created: true };
     },
-    async createThread(params: { threadId: string; userId: string; agentId: string; name?: string }) {
-      const result = (await implemented.getOrCreateThread!(params as never)) as { thread: Thread };
+    async createThread(params: {
+      threadId: string;
+      userId: string;
+      agentId: string;
+      name?: string;
+    }) {
+      if (!implemented.getOrCreateThread) {
+        throw new Error("Thread creation is unavailable.");
+      }
+      const result = (await implemented.getOrCreateThread(params as never)) as {
+        thread: Thread;
+      };
       return result.thread;
     },
     async getThreadMessages(params: { threadId: string; userId: string }) {
       await runner.hydrated;
-      if (!threadSummary(params.threadId, params.userId)) return { messages: [] };
+      if (!threadSummary(params.threadId, params.userId))
+        return { messages: [] };
       return {
-        messages: runner.getThreadMessages(params.threadId, { ownerId: params.userId }),
+        messages: runner.getThreadMessages(params.threadId, {
+          ownerId: params.userId,
+        }),
       };
     },
     /*
@@ -113,21 +141,56 @@ export function createLocalIntelligence(): CopilotKitIntelligence {
      * thread; the row is the lease (run id + expiry) that outlives the transaction.
      */
     // Same Postgres leases the runner takes (pg-runner.ts): advisory lock + lease row.
-    async ɵacquireThreadLock(params: { threadId: string; runId: string; userId: string }) {
+    async ɵacquireThreadLock(params: {
+      threadId: string;
+      runId: string;
+      userId: string;
+    }) {
       try {
-        await acquireThreadLease(params.threadId, params.runId, params.userId, 120);
+        await acquireThreadLease(
+          params.threadId,
+          params.runId,
+          params.userId,
+          120,
+        );
       } catch (error) {
         if (error instanceof ThreadLeasedError)
-          throw new PlatformRequestError("Thread is already running", 409, true, "thread_locked");
+          throw new PlatformRequestError(
+            "Thread is already running",
+            409,
+            true,
+            "thread_locked",
+          );
         throw error;
       }
-      return { threadId: params.threadId, runId: params.runId, joinToken: randomUUID(), ttlSeconds: 120 };
+      return {
+        threadId: params.threadId,
+        runId: params.runId,
+        joinToken: randomUUID(),
+        ttlSeconds: 120,
+      };
     },
-    async ɵrenewThreadLock(params: { threadId: string; runId?: string; ttlSeconds?: number }) {
+    async ɵrenewThreadLock(params: {
+      threadId: string;
+      runId?: string;
+      ttlSeconds?: number;
+    }) {
       const ttl = params.ttlSeconds ?? 120;
       const rows = await renewThreadLease(params.threadId, params.runId, ttl);
-      if (rows.length === 0) return { ttlSeconds: 0, status: "completed", threadId: params.threadId };
-      return { ttlSeconds: ttl, status: "renewed", threadId: params.threadId, runId: rows[0]!.run_id };
+      if (rows.length === 0)
+        return {
+          ttlSeconds: 0,
+          status: "completed",
+          threadId: params.threadId,
+        };
+      const lease = rows[0];
+      if (!lease) throw new Error("Lease renewal returned no row.");
+      return {
+        ttlSeconds: ttl,
+        status: "renewed",
+        threadId: params.threadId,
+        runId: lease.run_id,
+      };
     },
     async ɵcleanupThreadLock(params: { threadId: string; runId?: string }) {
       await releaseThreadLease(params.threadId, params.runId);
@@ -135,7 +198,8 @@ export function createLocalIntelligence(): CopilotKitIntelligence {
     ɵgetRunnerWsUrl: () => `${LOCAL_INTELLIGENCE_SETTINGS.gatewayWsUrl}/runner`,
     ɵgetRunnerAuthToken: () => LOCAL_INTELLIGENCE_SETTINGS.apiKey,
     ɵgetClientWsUrl: () => `${LOCAL_INTELLIGENCE_SETTINGS.gatewayWsUrl}/client`,
-    ɵgetChannelsWsUrl: () => `${LOCAL_INTELLIGENCE_SETTINGS.gatewayWsUrl}/channels`,
+    ɵgetChannelsWsUrl: () =>
+      `${LOCAL_INTELLIGENCE_SETTINGS.gatewayWsUrl}/channels`,
     async getInspectorMetadata() {
       return undefined;
     },

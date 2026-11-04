@@ -1834,34 +1834,34 @@ export function mountCopilotRuntime(
   const intelligenceClient: CopilotKitIntelligence = local
     ? createLocalIntelligence()
     : observeIntelligenceAuthentication(
-      new IntelligenceKnowingANewThread({
-        apiUrl: intelligence.apiUrl,
-        wsUrl: intelligence.gatewayWsUrl,
-        browserWsUrl: intelligence.browserGatewayWsUrl,
-        apiKey: intelligence.apiKey,
-        getLearningContainerId: async ({
-          agentId,
-          input,
-          user,
-        }): Promise<string | undefined> => {
-          if (!user)
-            throw new Error(
-              "Learning Thread assignment requires a verified user.",
-            );
-          return learning?.containerForThread({
+        new IntelligenceKnowingANewThread({
+          apiUrl: intelligence.apiUrl,
+          wsUrl: intelligence.gatewayWsUrl,
+          browserWsUrl: intelligence.browserGatewayWsUrl,
+          apiKey: intelligence.apiKey,
+          getLearningContainerId: async ({
             agentId,
-            threadId: input.threadId,
-            userId: user.id,
-          });
-        },
-        ...(trajectoryCapture
-          ? {
-              getTrajectoryLearningContainerIds:
-                trajectoryCapture.selectLearningContainers,
-            }
-          : {}),
-      }),
-    );
+            input,
+            user,
+          }): Promise<string | undefined> => {
+            if (!user)
+              throw new Error(
+                "Learning Thread assignment requires a verified user.",
+              );
+            return learning?.containerForThread({
+              agentId,
+              threadId: input.threadId,
+              userId: user.id,
+            });
+          },
+          ...(trajectoryCapture
+            ? {
+                getTrajectoryLearningContainerIds:
+                  trajectoryCapture.selectLearningContainers,
+              }
+            : {}),
+        }),
+      );
 
   const learning: LearningRuntime | undefined = learningSettings
     ? createLearningRuntime({
@@ -1883,7 +1883,10 @@ export function mountCopilotRuntime(
     // NovaBot: local mode is the runtime's self-hosted SSE mode on the durable Postgres runner.
     ...(local
       ? { runner: localRunner() }
-      : { intelligence: intelligenceClient, licenseToken: intelligence.licenseToken }),
+      : {
+          intelligence: intelligenceClient,
+          licenseToken: intelligence.licenseToken,
+        }),
     // Carried on the events the runtime already sends, so OpenBot's traffic is separable from any
     // other deployment's. Adds no events of its own.
     telemetryProperties: {

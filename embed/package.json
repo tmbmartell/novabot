@@ -1,2 +1,8 @@
-{ "name": "novabot-embed", "private": true, "type": "module",
-  "dependencies": { "@huggingface/transformers": "3.7.5" } }
+{
+  "name": "novabot-embed",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@huggingface/transformers": "3.7.5"
+  }
+}

@@ -19,7 +19,11 @@ import { environmentFor } from "./environment";
 import { registerEntry } from "./identity";
 import { listenPort } from "./listen-port";
 import { legacyNamesFor, namesFor } from "./names";
-import { beforeEnsure, NotEnoughMemoryError, startIdleReaper } from "./novabot-limits";
+import {
+  beforeEnsure,
+  NotEnoughMemoryError,
+  startIdleReaper,
+} from "./novabot-limits";
 
 /**
  * The container supervisor: the only thing here that holds the Docker socket.

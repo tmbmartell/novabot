@@ -44,7 +44,10 @@ function schema() {
 }
 
 /** Embed texts with the local model; null when the service is unavailable (full-text fallback). */
-export async function embed(texts: string[], kind: "query" | "passage"): Promise<number[][] | null> {
+export async function embed(
+  texts: string[],
+  kind: "query" | "passage",
+): Promise<number[][] | null> {
   if (!EMBED_URL || texts.length === 0) return null;
   try {
     const response = await fetch(`${EMBED_URL}/embed`, {
@@ -63,7 +66,11 @@ export async function embed(texts: string[], kind: "query" | "passage"): Promise
 
 const literal = (vector: number[]) => `[${vector.join(",")}]`;
 
-export async function rememberForAgent(agentId: string, userId: string, content: string) {
+export async function rememberForAgent(
+  agentId: string,
+  userId: string,
+  content: string,
+) {
   const { sql, ready } = schema();
   await ready;
   const vector = (await embed([content], "passage"))?.[0];
@@ -85,15 +92,25 @@ async function backfill(agentId: string, userId: string) {
     content: string;
   }[];
   if (rows.length === 0) return;
-  const vectors = await embed(rows.map((r) => r.content), "passage");
+  const vectors = await embed(
+    rows.map((r) => r.content),
+    "passage",
+  );
   if (!vectors) return;
   for (const [i, r] of rows.entries()) {
-    await sql`UPDATE nb_agent_memory SET embedding = (${literal(vectors[i]!)}::text)::vector
+    const vector = vectors[i];
+    if (!vector) throw new Error("Embedding response is missing a vector.");
+    await sql`UPDATE nb_agent_memory SET embedding = (${literal(vector)}::text)::vector
       WHERE id = ${r.id}::bigint AND agent_id = ${agentId} AND user_id = ${userId}`;
   }
 }
 
-export type RecalledMemory = { id: string; content: string; score: number; createdAt: string };
+export type RecalledMemory = {
+  id: string;
+  content: string;
+  score: number;
+  createdAt: string;
+};
 
 export async function recallForAgent(
   agentId: string,
@@ -130,7 +147,11 @@ export async function recallForAgent(
     LIMIT ${limit}`) as RecalledMemory[];
 }
 
-export async function forgetForAgent(agentId: string, userId: string, id: string) {
+export async function forgetForAgent(
+  agentId: string,
+  userId: string,
+  id: string,
+) {
   const { sql, ready } = schema();
   await ready;
   const rows = await sql`DELETE FROM nb_agent_memory

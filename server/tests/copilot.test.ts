@@ -219,7 +219,7 @@ describe("deployment model selection", () => {
     async (environment) => {
       const request = await runGeneralAssistantWithEnvironment(environment);
 
-      expect(request.model).toBe("gpt-5.6-terra");
+      expect(request.model).toBe("deepseek-flash");
     },
   );
 

@@ -133,6 +133,7 @@ export function BotDirectory({
                 {latest?.busy ? (
                   <span
                     className="novagente-bot-busy"
+                    role="status"
                     aria-label="Trabalhando"
                   />
                 ) : null}

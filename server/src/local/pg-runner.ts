@@ -5,7 +5,14 @@ import {
   ɵGLOBAL_STORE,
 } from "@copilotkit/runtime/v2";
 import type { BaseEvent, Message } from "@ag-ui/client";
-import { defer, finalize, from, type Observable, shareReplay, switchMap } from "rxjs";
+import {
+  defer,
+  finalize,
+  from,
+  type Observable,
+  shareReplay,
+  switchMap,
+} from "rxjs";
 
 /**
  * NovaBot: the CopilotKit in-memory runner, made durable with PostgreSQL.
@@ -45,9 +52,13 @@ export function registerLocalSql(sql: SQL): void {
   registered ??= sql;
 }
 
-export function localDatabase(url = process.env.DATABASE_URL): { sql: SQL; ready: Promise<void> } {
+export function localDatabase(url = process.env.DATABASE_URL): {
+  sql: SQL;
+  ready: Promise<void>;
+} {
   if (shared) return shared;
-  if (!registered && !url) throw new Error("NovaBot local runtime needs the server's database.");
+  if (!registered && !url)
+    throw new Error("NovaBot local runtime needs the server's database.");
   const sql = registered ?? new SQL(url as string);
   const ready = (async () => {
     await sql.unsafe(`
@@ -105,7 +116,9 @@ export class PostgresAgentRunner extends InMemoryAgentRunner {
         });
       });
     }
-    console.info(JSON.stringify({ type: "novabot-threads-loaded", count: rows.length }));
+    console.info(
+      JSON.stringify({ type: "novabot-threads-loaded", count: rows.length }),
+    );
   }
 
   /*
@@ -116,7 +129,9 @@ export class PostgresAgentRunner extends InMemoryAgentRunner {
    */
   override run(request: AgentRunnerRunRequest): Observable<BaseEvent> {
     const runId = request.input.runId;
-    const observable = defer(() => from(acquireThreadLease(request.threadId, runId, request.ownerId ?? ""))).pipe(
+    const observable = defer(() =>
+      from(acquireThreadLease(request.threadId, runId, request.ownerId ?? "")),
+    ).pipe(
       switchMap(() => super.run(request)),
       finalize(() => {
         void releaseThreadLease(request.threadId, runId).catch(() => {});
@@ -126,8 +141,13 @@ export class PostgresAgentRunner extends InMemoryAgentRunner {
     const persist = () =>
       // appendRun lands on the runner's own finalize; give it a moment, then write.
       setTimeout(() => {
-        void this.persist(request.threadId, request.ownerId ?? "").catch((error) =>
-          console.error("[novabot] could not store thread", request.threadId, error),
+        void this.persist(request.threadId, request.ownerId ?? "").catch(
+          (error) =>
+            console.error(
+              "[novabot] could not store thread",
+              request.threadId,
+              error,
+            ),
         );
       }, 250);
     observable.subscribe({ complete: persist, error: persist });
@@ -187,7 +207,12 @@ export class ThreadLeasedError extends Error {
   }
 }
 
-export async function acquireThreadLease(threadId: string, runId: string, userId: string, ttl = LEASE_SECONDS) {
+export async function acquireThreadLease(
+  threadId: string,
+  runId: string,
+  userId: string,
+  ttl = LEASE_SECONDS,
+) {
   const { sql, ready } = leases();
   await ready;
   const ok = await sql.begin(async (tx) => {
@@ -204,7 +229,11 @@ export async function acquireThreadLease(threadId: string, runId: string, userId
   if (!ok) throw new ThreadLeasedError(threadId);
 }
 
-export async function renewThreadLease(threadId: string, runId: string | undefined, ttl = LEASE_SECONDS) {
+export async function renewThreadLease(
+  threadId: string,
+  runId: string | undefined,
+  ttl = LEASE_SECONDS,
+) {
   const { sql, ready } = leases();
   await ready;
   return (await sql.begin(async (tx) => {
