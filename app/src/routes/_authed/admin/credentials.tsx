@@ -19,6 +19,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { revokeCredentialMutationOptions } from "@/lib/credentials/mutations";
 import { credentialListQueryOptions } from "@/lib/credentials/queries";
+import { modelProviderLabel } from "@/lib/credentials/model-provider-catalog";
 
 export const Route = createFileRoute("/_authed/admin/credentials")({
   component: CredentialsPage,
@@ -41,17 +42,15 @@ function CredentialsPage() {
           variant="ghost"
         >
           <IconPlus />
-          
           Adicionar credencial
         </Button>
       }
-      description="Gerencie as chaves e tokens desta implantação. Segredos salvos não podem ser vistos de novo."
+      description="API Keys de IA e credenciais protegidas. Cadastrar uma chave não muda automaticamente o modelo de um bot."
       title="Credenciais"
     >
       <PageSection title="Credenciais salvas">
         {credentials.isPending ? null : credentials.error ? (
           <p className="mt-4 text-destructive text-sm" role="alert">
-            
             Não foi possível carregar as credenciais. Recarregue a página.
           </p>
         ) : credentials.data?.length === 0 ? (
@@ -65,14 +64,12 @@ function CredentialsPage() {
                 variant="outline"
               >
                 <IconPlus />
-                
                 Adicionar credencial
               </Button>
             }
             icon={IconKey}
             title="Nenhuma credencial ainda"
           >
-            
             Chaves e tokens de modelos e conectores ficam aqui.
           </PageEmpty>
         ) : (
@@ -81,10 +78,14 @@ function CredentialsPage() {
               <StaggerItem index={index} key={credential.id}>
                 <Item size="sm">
                   <ItemContent>
-                    <ItemTitle>{credential.provider}</ItemTitle>
+                    <ItemTitle>
+                      {credential.kind === "model"
+                        ? modelProviderLabel(credential.provider)
+                        : credential.provider}
+                    </ItemTitle>
                     <ItemDescription>
                       {credential.kind} · {credential.keyId} ·{" "}
-                      {credential.revokedAt ? "revoked" : "active"}
+                      {credential.revokedAt ? "Revogada" : "Guardada no cofre"}
                     </ItemDescription>
                   </ItemContent>
                   <ItemActions>
@@ -97,7 +98,6 @@ function CredentialsPage() {
                       size="sm"
                       variant="outline"
                     >
-                      
                       Revogar
                     </Button>
                   </ItemActions>

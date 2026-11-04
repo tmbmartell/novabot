@@ -25,6 +25,10 @@ import {
 } from "@/lib/credentials/form";
 import { createCredentialMutationOptions } from "@/lib/credentials/mutations";
 import {
+  MODEL_PROVIDER_OPTIONS,
+  modelProviderPreset,
+} from "@/lib/credentials/model-provider-catalog";
+import {
   type CredentialStatus,
   credentialListQueryOptions,
 } from "@/lib/credentials/queries";
@@ -74,7 +78,7 @@ function NewCredentialPage() {
   return (
     <PageShell
       backButton={BACK}
-      description="Salve uma credencial para esta implantação. Você não poderá ver o segredo depois de salvar."
+      description="Cadastre chaves de IA com criptografia. O segredo não poderá ser visualizado depois."
       title="Adicionar credencial"
     >
       <form
@@ -91,7 +95,6 @@ function NewCredentialPage() {
                 render={(props) => <Link {...props} to="/admin/credentials" />}
                 variant="outline"
               >
-                
                 Cancelar
               </Button>
               <form.Subscribe
@@ -122,8 +125,8 @@ function NewCredentialPage() {
                   <Field data-invalid={isInvalid}>
                     <FieldLabel htmlFor={field.name}>Digite</FieldLabel>
                     <FieldDescription>
-                      
-                      A chave de um provedor de modelos, ou uma com que um conector faz login.
+                      A chave de um provedor de modelos, ou uma com que um
+                      conector faz login.
                     </FieldDescription>
                     <Select
                       items={KIND_LABEL}
@@ -160,17 +163,50 @@ function NewCredentialPage() {
                 return (
                   <Field data-invalid={isInvalid}>
                     <FieldLabel htmlFor={field.name}>Provedor</FieldLabel>
-                    <Input
-                      aria-invalid={isInvalid}
-                      id={field.name}
-                      name={field.name}
-                      onBlur={field.handleBlur}
-                      onChange={(event) =>
-                        field.handleChange(event.target.value)
+                    <form.Subscribe selector={(state) => state.values.kind}>
+                      {(kind) =>
+                        kind === "model" ? (
+                          <Select
+                            items={MODEL_PROVIDER_OPTIONS}
+                            onValueChange={(value) =>
+                              field.handleChange(value ?? "")
+                            }
+                            value={field.state.value}
+                          >
+                            <SelectTrigger
+                              aria-invalid={isInvalid}
+                              className="w-full"
+                              id={field.name}
+                            >
+                              <SelectValue placeholder="Selecione o provedor de IA" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                {Object.entries(MODEL_PROVIDER_OPTIONS).map(
+                                  ([id, label]) => (
+                                    <SelectItem key={id} value={id}>
+                                      {label}
+                                    </SelectItem>
+                                  ),
+                                )}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input
+                            aria-invalid={isInvalid}
+                            id={field.name}
+                            name={field.name}
+                            onBlur={field.handleBlur}
+                            onChange={(event) =>
+                              field.handleChange(event.target.value)
+                            }
+                            placeholder="Nome do conector"
+                            value={field.state.value}
+                          />
+                        )
                       }
-                      placeholder="OpenAI"
-                      value={field.state.value}
-                    />
+                    </form.Subscribe>
                     {isInvalid ? (
                       <FieldError errors={field.state.meta.errors} />
                     ) : null}
@@ -178,6 +214,39 @@ function NewCredentialPage() {
                 );
               }}
             </form.Field>
+            <form.Subscribe
+              selector={(state) =>
+                [state.values.kind, state.values.provider] as const
+              }
+            >
+              {([kind, provider]) => {
+                const preset =
+                  kind === "model" ? modelProviderPreset(provider) : undefined;
+                if (!preset) return null;
+                return (
+                  <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
+                    <p>
+                      <strong>{preset.label}</strong> · {preset.protocol}
+                    </p>
+                    <p className="mt-1 break-all text-muted-foreground">
+                      {preset.endpoint}
+                    </p>
+                    <a
+                      href={preset.docs}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-block text-primary underline underline-offset-2"
+                    >
+                      Onde criar minha API Key
+                    </a>
+                    <p className="mt-2 text-muted-foreground">
+                      Chave guardada não significa modelo ativado. Vincular
+                      provedor e bot será uma configuração separada.
+                    </p>
+                  </div>
+                );
+              }}
+            </form.Subscribe>
             <form.Field name="keyId">
               {(field) => {
                 const isInvalid =
@@ -186,7 +255,6 @@ function NewCredentialPage() {
                   <Field data-invalid={isInvalid}>
                     <FieldLabel htmlFor={field.name}>ID da chave</FieldLabel>
                     <FieldDescription>
-                      
                       Diferencia esta chave de outras do mesmo provedor.
                     </FieldDescription>
                     <Input
@@ -197,7 +265,7 @@ function NewCredentialPage() {
                       onChange={(event) =>
                         field.handleChange(event.target.value)
                       }
-                      placeholder="production"
+                      placeholder="minha-chave"
                       value={field.state.value}
                     />
                     {isInvalid ? (
@@ -253,15 +321,18 @@ function NewCredentialPage() {
             {([kind, provider, keyId]) =>
               liveCredentialFor(credentials.data, kind, provider, keyId) ? (
                 <p className="mt-5 text-amber-600 text-sm dark:text-amber-500">
-                  
-                  Esta chave já tem uma credencial ativa. Salvar a substitui e revoga a antiga.
+                  Esta chave já tem uma credencial ativa. Salvar a substitui e
+                  revoga a antiga.
                 </p>
               ) : null
             }
           </form.Subscribe>
+          <p className="mt-4 text-muted-foreground text-sm">
+            OAuth e API Key são mecanismos diferentes. O login no ChatGPT não
+            substitui uma chave da API OpenAI.
+          </p>
           {createCredential.error ? (
             <p className="mt-5 text-destructive text-sm" role="alert">
-              
               Não foi possível salvar a credencial. Tente novamente.
             </p>
           ) : null}

@@ -128,9 +128,29 @@ export type CredentialStatusReader = {
   list: () => Promise<CredentialStatus[]>;
 };
 
+/** Provider-scoped keys. Registering a provider never enables it for a Bot. */
+export type ModelKeyProvider =
+  | "openai"
+  | "anthropic"
+  | "kimi"
+  | "minimax"
+  | "gemini"
+  | "deepseek"
+  | "openrouter";
+
+export const MODEL_PROVIDER_KEY_VARIABLES: Record<ModelKeyProvider, string> = {
+  openai: "OPENAI_API_KEY",
+  anthropic: "ANTHROPIC_API_KEY",
+  kimi: "KIMI_API_KEY",
+  minimax: "MINIMAX_API_KEY",
+  gemini: "GEMINI_API_KEY",
+  deepseek: "DEEPSEEK_API_KEY",
+  openrouter: "OPENROUTER_API_KEY",
+};
+
 export type ModelCredentialSecretReader = {
   readModelSecret: (input: {
-    provider: "openai" | "anthropic";
+    provider: ModelKeyProvider;
     keyId: string;
   }) => Promise<{ encryptedValue: string } | null>;
 };
@@ -259,7 +279,7 @@ export async function decryptCredentialForUse(
 export async function resolveModelApiKey(input: {
   encryptionKey: string;
   reader: ModelCredentialSecretReader;
-  provider: "openai" | "anthropic";
+  provider: ModelKeyProvider;
   keyId: string;
   environment: Record<string, string | undefined>;
 }) {
@@ -272,9 +292,7 @@ export async function resolveModelApiKey(input: {
   }
 
   const environmentKey =
-    input.environment[
-      input.provider === "anthropic" ? "ANTHROPIC_API_KEY" : "OPENAI_API_KEY"
-    ]?.trim();
+    input.environment[MODEL_PROVIDER_KEY_VARIABLES[input.provider]]?.trim();
   return environmentKey || null;
 }
 

@@ -1,0 +1,43 @@
+name: NOVAGENTE Model Providers
+
+on:
+  pull_request:
+    paths:
+      - 'app/src/lib/credentials/**'
+      - 'app/src/routes/_authed/admin/credentials*'
+      - 'app/tests/model-provider-catalog.test.ts'
+      - 'server/src/credentials.ts'
+      - 'server/tests/model-api-vault-providers.test.ts'
+      - '.github/workflows/novabot-model-providers.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: model-providers-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  provider-keys:
+    name: Model provider credentials and interface
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.3
+      - run: bun install --frozen-lockfile
+      - name: Biome on changed source files
+        run: |
+          bunx biome format app/src/lib/credentials/form.ts app/src/lib/credentials/model-provider-catalog.ts app/src/routes/_authed/admin/credentials.tsx app/src/routes/_authed/admin/credentials_.new.tsx app/tests/model-provider-catalog.test.ts server/src/credentials.ts server/tests/model-api-vault-providers.test.ts
+      - name: Provider key and form regression tests
+        run: bun test app/tests/credential-form.test.ts app/tests/model-provider-catalog.test.ts server/tests/model-api-vault-providers.test.ts
+      - name: Typecheck application
+        run: bun run --cwd app typecheck
+      - name: Typecheck server
+        run: bun run --cwd server typecheck
+      - name: Build application
+        run: bun run --cwd app build
