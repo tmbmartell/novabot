@@ -42,6 +42,7 @@ import {
 } from "./agents/lifecycle";
 import { createBotReset } from "./agents/lifecycle-reset";
 import { createAgentProfileStore } from "./agents/profile-store";
+import { createConexoesStore } from "./conexoes/store";
 import type { AgentActor } from "./agents/profile-types";
 import { createRuntimeAgentLoader } from "./agents/runtime-agents";
 import { serverTurnAdmission } from "./agents/turn-admission";
@@ -306,6 +307,7 @@ clearLearningRevisionFallback();
 // `serverPort` in config.ts for what `process.env.PORT ?? …` did with `PORT=` instead.
 const port = config.port;
 const database = createDatabase(config.databaseUrl);
+const conexoesStore = createConexoesStore(database);
 // NovaBot: the local runtime stores threads through the same pool.
 registerLocalSql(database.$client);
 const profileStore = createProfileStore(database);
@@ -2768,6 +2770,7 @@ const app = createApp(
     },
     groups: groupConversations,
     teamBots,
+    conexoes: conexoesStore,
     lifecycle: {
       lifecycle: createBotLifecycleStore(database),
       reset: createBotReset({

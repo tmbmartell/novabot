@@ -666,6 +666,10 @@ export const auditEventTypes = [
   /* A person opened one of their own learned Skills to every Bot, or closed it again. Target and payload `skill`. */
   "learning.skill_opened",
   "learning.skill_closed",
+  "conexoes.application_created",
+  "conexoes.application_removed",
+  "conexoes.permission_granted",
+  "conexoes.permission_revoked",
 ] as const;
 
 export type AuditEventType = (typeof auditEventTypes)[number];

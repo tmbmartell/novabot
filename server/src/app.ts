@@ -21,6 +21,8 @@ import {
 import type { BotAccessCheck } from "./agents/profile-policy";
 import type { AgentProfileStore } from "./agents/profile-store";
 import { createAgentRoutes } from "./agents/routes";
+import { createConexoesRoutes } from "./conexoes/routes";
+import type { ConexoesStore } from "./conexoes/store";
 import { createApprovalRoutes } from "./approvals/routes";
 import type { ApprovalService } from "./approvals/service";
 import {
@@ -459,6 +461,8 @@ export function createApp(
     };
     groups?: GroupConversations;
     teamBots?: TeamBots;
+    /** Owner-controlled app registry. Metadata only; no browser access by registration. */
+    conexoes?: ConexoesStore;
     /** Pause, reset, Activity and attention for a person's own Bots. See agents/lifecycle.ts. */
     lifecycle?: BotLifecycleServices;
   },
@@ -1454,6 +1458,18 @@ export function createApp(
               (await agentProfileStore.get(actor, botId))?.name ?? null
           : undefined,
       }),
+    );
+  }
+
+  if (coworker?.conexoes && agentProfileStore) {
+    app.route(
+      "/api/conexoes",
+      createConexoesRoutes(
+        coworker.conexoes,
+        requireUser,
+        agentProfileStore,
+        auditStore,
+      ),
     );
   }
 
