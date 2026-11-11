@@ -1,4 +1,4 @@
-import { IconKey, IconLockOff, IconPlus, IconShieldLock, IconTrash } from "@tabler/icons-react";
+import { IconKey, IconLockOff, IconPlus, IconSearch, IconShieldLock, IconTrash } from "@tabler/icons-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
@@ -9,6 +9,14 @@ import {
   PageShell,
 } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Item,
@@ -45,8 +53,30 @@ function PasswordsPage() {
   const [site, setSite] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [filter, setFilter] = useState("");
+  const [deleteCandidate, setDeleteCandidate] = useState<{ id: string; origin: string; username: string } | null>(null);
 
   const canSave = logins.data?.passwordManager === true;
+  const allLogins = logins.data?.logins ?? [];
+  const search = filter.trim().toLocaleLowerCase("pt-BR");
+  const visibleLogins = search
+    ? allLogins.filter((login) =>
+        [login.origin, login.username].some((value) => value.toLocaleLowerCase("pt-BR").includes(search)),
+      )
+    : allLogins;
+  // A saved login is unique by owner, origin and username. Warn before replacing it.
+  let proposedOrigin: string | undefined;
+  try {
+    const address = site.trim();
+    proposedOrigin = new URL(
+      /^[a-z][a-z0-9+.-]*:\/\//i.test(address) ? address : "https://" + address,
+    ).origin;
+  } catch {
+    proposedOrigin = undefined;
+  }
+  const replacing = allLogins.some(
+    (login) => login.origin === proposedOrigin && login.username === username.trim(),
+  );
 
   function clearForm() {
     setSite("");
@@ -133,6 +163,11 @@ function PasswordsPage() {
                 />
               </label>
             </div>
+            {replacing ? (
+              <p className="mt-4 rounded-lg border border-amber-300/50 bg-amber-50/70 p-3 text-sm text-amber-950 dark:bg-amber-500/10 dark:text-amber-200">
+                Esse login já está salvo. Ao continuar, você substituirá a senha anterior.
+              </p>
+            ) : null}
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
               <p className="max-w-md text-muted-foreground text-xs">
                 Para sua proteção, o cadastro manual aceita apenas sites HTTPS.
@@ -154,6 +189,24 @@ function PasswordsPage() {
         </PageSection>
       ) : null}
       <PageSection title="Logins salvos">
+        {canSave && allLogins.length > 0 ? (
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full sm:max-w-sm">
+              <IconSearch aria-hidden="true" className="absolute top-2.5 left-3 size-4 text-muted-foreground" />
+              <Input
+                aria-label="Buscar logins salvos"
+                autoComplete="off"
+                className="pl-9"
+                placeholder="Buscar por site ou usuário"
+                value={filter}
+                onChange={(event) => setFilter(event.target.value)}
+              />
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {visibleLogins.length} de {allLogins.length} acessos
+            </span>
+          </div>
+        ) : null}
         {logins.isPending ? null : logins.error ? (
           <p className="text-destructive text-sm" role="alert">
             Não foi possível carregar suas senhas. Recarregue a página.
@@ -167,9 +220,13 @@ function PasswordsPage() {
           <PageEmpty icon={IconKey} title="Seu cofre está vazio">
             Clique em Adicionar login para guardar seu primeiro acesso.
           </PageEmpty>
+        ) : visibleLogins.length === 0 ? (
+          <PageEmpty icon={IconSearch} title="Nenhum login encontrado">
+            Experimente outro termo de busca.
+          </PageEmpty>
         ) : (
           <PageRows>
-            {logins.data.logins.map((login, index) => (
+            {visibleLogins.map((login, index) => (
               <div key={login.id}>
                 {index > 0 ? <Separator /> : null}
                 <Item size="sm">
@@ -191,7 +248,7 @@ function PasswordsPage() {
                       size="sm"
                       variant="ghost"
                       disabled={remove.isPending}
-                      onClick={() => remove.mutate(login.id)}
+                      onClick={() => setDeleteCandidate({ id: login.id, origin: login.origin, username: login.username })}
                     >
                       <IconTrash />
                     </Button>
@@ -207,6 +264,33 @@ function PasswordsPage() {
           </p>
         ) : null}
       </PageSection>
+      <Dialog
+        open={deleteCandidate !== null}
+        onOpenChange={(open) => { if (!open) setDeleteCandidate(null); }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir login salvo?</DialogTitle>
+            <DialogDescription>
+              O acesso de {deleteCandidate?.username} em {deleteCandidate?.origin} será removido do cofre.
+              Essa ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteCandidate(null)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              disabled={remove.isPending || !deleteCandidate}
+              onClick={() => {
+                if (!deleteCandidate) return;
+                remove.mutate(deleteCandidate.id, { onSuccess: () => setDeleteCandidate(null) });
+              }}
+            >
+              {remove.isPending ? "Excluindo…" : "Excluir login"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   );
 }
