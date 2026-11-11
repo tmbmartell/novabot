@@ -198,6 +198,22 @@ export function createPasswordRoutes(
   routes.get("/", async (context) =>
     context.json(await service.logins(context.var.actor.id)),
   );
+  // Private manual entry: a Bot cannot call this route without the owner's session.
+  // Passwords are never returned by the route, including on success or failure.
+  routes.post("/", async (context) => {
+    const body = await readBody(context.req.raw);
+    const site = field(body, "site", { required: true, max: 2048 }) as string;
+    const username = field(body, "username", { required: true, max: 512 }) as string;
+    const password = field(body, "password", { required: true, max: 4096 }) as string;
+    return context.json(
+      await service.saveManualLogin(context.var.actor.id, actorOf(context), {
+        site,
+        username,
+        password,
+      }),
+      201,
+    );
+  });
   routes.delete("/:id", async (context) =>
     context.json(
       await service.deleteLogin(

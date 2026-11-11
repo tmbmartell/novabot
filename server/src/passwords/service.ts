@@ -765,6 +765,70 @@ export function createSignInService(deps: SignInServiceDependencies) {
       };
     },
 
+    /**
+     * Manually add a login from the owner's private Vault screen.
+     *
+     * The account is stored under the signed-in owner only and encrypted with the
+     * same server-side key used for sign-in captures. Saving never logs in, sends
+     * a credential to a model, or grants any Bot permission to use it.
+     */
+    async saveManualLogin(
+      owner: string,
+      actor: ActionActor,
+      input: { site: string; username: string; password: string },
+    ): Promise<SavedLoginView> {
+      if (!(await managerOn(owner)))
+        throw new SignInRefusedError(
+          "Saving passwords is turned off for this workspace.",
+          403,
+        );
+      // Do not echo malformed URLs: people sometimes paste credentials in them.
+      let origin: string;
+      try {
+        origin = originOf(input.site);
+      } catch (error) {
+        if (error instanceof SignInRefusedError)
+          throw new SignInRefusedError(
+            "Enter a valid website address without embedded credentials.",
+          );
+        throw error;
+      }
+      // A manually saved password must not be sent to an unencrypted website.
+      if (new URL(origin).protocol !== "https:")
+        throw new SignInRefusedError(
+          "Only HTTPS websites can be saved in the Vault.",
+        );
+      const username = input.username.trim();
+      if (
+        !username ||
+        username.length > 512 ||
+        !input.password ||
+        input.password.length > 4096
+      )
+        throw new SignInRefusedError("Enter a valid username and password.");
+
+      const saved = await store.saveLogin({
+        ownerUserId: owner,
+        origin,
+        username,
+        encryptedPassword: await encryptSecret(
+          deps.encryptionKey,
+          input.password,
+        ),
+      });
+      await audit("password.saved", actor, "password", saved.id, {
+        site: origin,
+        login: saved.id,
+        source: "manual",
+      });
+      const {
+        encryptedPassword: _secret,
+        ownerUserId: _owner,
+        ...publicLogin
+      } = saved;
+      return publicLogin;
+    },
+
     async deleteLogin(owner: string, id: string, actor: ActionActor) {
       const login = await store.login(owner, id);
       if (!login || !(await store.deleteLogin(owner, id)))

@@ -84,6 +84,22 @@ export function cancelSignInMutationOptions(queryClient: QueryClient) {
   });
 }
 
+/**
+ * The manual Vault submission avoids React Query mutation state altogether.
+ * A password must not linger under mutation.variables in the shared query cache.
+ */
+export async function saveManualLogin(input: {
+  site: string;
+  username: string;
+  password: string;
+}): Promise<void> {
+  await client("/api/passwords", {
+    method: "POST",
+    body: input,
+    fallback: "Não foi possível salvar o login",
+  });
+}
+
 export function deleteSavedLoginMutationOptions(queryClient: QueryClient) {
   return mutationOptions({
     mutationFn: async (loginId: string) => {
