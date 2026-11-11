@@ -101,6 +101,27 @@ describe("computerGuidance", () => {
     expect(guidance).toContain("cannot search");
   });
 
+  test.each([
+    ["with search", WITH_SEARCH],
+    ["without search", WITHOUT_SEARCH],
+  ])("recovers from ordinary errors without bypassing boundaries (%s)", (_, guidance) => {
+    const text = flat(guidance);
+    expect(text).toContain("do not immediately give up");
+    expect(text).toContain("inspect the current state");
+    expect(text).toContain("never repeat the same failed call more than once without new evidence");
+    expect(text).toContain("another tool or workflow you already have permission to use");
+    expect(text).toContain("never bypass it with a different tool, account or endpoint");
+    expect(text).toContain("approval requirement");
+    expect(text).toContain("rate limit");
+    expect(text).toContain("verify the outcome");
+  });
+
+  test("does not suggest browser search when no search capability exists", () => {
+    const text = flat(WITHOUT_SEARCH);
+    expect(text).toContain("use search only when a real search tool is available");
+    expect(text).toContain("never drive your browser to a search engine");
+  });
+
   test("says what it is about to do before its first computer action", () => {
     // A first action can sit through a cold start; a sentence first means the wait has a reason.
     for (const search of [true, false]) {
