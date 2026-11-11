@@ -782,21 +782,39 @@ export function createSignInService(deps: SignInServiceDependencies) {
           "Saving passwords is turned off for this workspace.",
           403,
         );
-      const origin = originOf(input.site);
+      // Do not echo malformed URLs: people sometimes paste credentials in them.
+      let origin: string;
+      try {
+        origin = originOf(input.site);
+      } catch (error) {
+        if (error instanceof SignInRefusedError)
+          throw new SignInRefusedError(
+            "Enter a valid website address without embedded credentials.",
+          );
+        throw error;
+      }
       // A manually saved password must not be sent to an unencrypted website.
       if (new URL(origin).protocol !== "https:")
         throw new SignInRefusedError(
           "Only HTTPS websites can be saved in the Vault.",
         );
       const username = input.username.trim();
-      if (!username || username.length > 512 || !input.password || input.password.length > 4096)
+      if (
+        !username ||
+        username.length > 512 ||
+        !input.password ||
+        input.password.length > 4096
+      )
         throw new SignInRefusedError("Enter a valid username and password.");
 
       const saved = await store.saveLogin({
         ownerUserId: owner,
         origin,
         username,
-        encryptedPassword: await encryptSecret(deps.encryptionKey, input.password),
+        encryptedPassword: await encryptSecret(
+          deps.encryptionKey,
+          input.password,
+        ),
       });
       await audit("password.saved", actor, "password", saved.id, {
         site: origin,
