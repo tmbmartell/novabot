@@ -84,6 +84,21 @@ export function cancelSignInMutationOptions(queryClient: QueryClient) {
   });
 }
 
+/** A password typed on the owner's Vault page. The response contains metadata only. */
+export function saveManualLoginMutationOptions(queryClient: QueryClient) {
+  return mutationOptions({
+    mutationFn: async (input: { site: string; username: string; password: string }) => {
+      const response = await client("/api/passwords", {
+        method: "POST",
+        body: input,
+        fallback: "Não foi possível salvar o login",
+      });
+      return response.json();
+    },
+    onSuccess: () => invalidate(queryClient),
+  });
+}
+
 export function deleteSavedLoginMutationOptions(queryClient: QueryClient) {
   return mutationOptions({
     mutationFn: async (loginId: string) => {
