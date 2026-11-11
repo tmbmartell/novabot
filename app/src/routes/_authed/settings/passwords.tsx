@@ -29,9 +29,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import {
   deleteSavedLoginMutationOptions,
-  saveManualLoginMutationOptions,
+  saveManualLogin,
 } from "@/lib/passwords/mutations";
-import { savedLoginsQueryOptions } from "@/lib/passwords/queries";
+import { passwordKeys, savedLoginsQueryOptions } from "@/lib/passwords/queries";
 import { queryClient } from "@/query-client";
 
 export const Route = createFileRoute("/_authed/settings/passwords")({
@@ -48,7 +48,9 @@ export const Route = createFileRoute("/_authed/settings/passwords")({
 function PasswordsPage() {
   const logins = useQuery(savedLoginsQueryOptions());
   const remove = useMutation(deleteSavedLoginMutationOptions(queryClient));
-  const save = useMutation(saveManualLoginMutationOptions(queryClient));
+  // Keep passwords out of React Query mutation cache: submit straight to the API.
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const [adding, setAdding] = useState(false);
   const [site, setSite] = useState("");
   const [username, setUsername] = useState("");
@@ -79,10 +81,26 @@ function PasswordsPage() {
   );
 
   function clearForm() {
+    setSaveFailed(false);
     setSite("");
     setUsername("");
     setPassword("");
     setAdding(false);
+  }
+
+  async function submitManualLogin() {
+    if (isSaving) return;
+    setSaveFailed(false);
+    setIsSaving(true);
+    try {
+      await saveManualLogin({ site, username, password });
+      await queryClient.invalidateQueries({ queryKey: passwordKeys.all });
+      clearForm();
+    } catch {
+      setSaveFailed(true);
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -110,11 +128,7 @@ function PasswordsPage() {
             autoComplete="off"
             onSubmit={(event) => {
               event.preventDefault();
-              if (save.isPending) return;
-              save.mutate(
-                { site, username, password },
-                { onSuccess: clearForm },
-              );
+              void submitManualLogin();
             }}
             className="rounded-2xl border border-border bg-card p-5 shadow-sm"
           >
@@ -175,12 +189,12 @@ function PasswordsPage() {
               </p>
               <Button
                 type="submit"
-                disabled={save.isPending || !site.trim() || !username.trim() || !password}
+                disabled={isSaving || !site.trim() || !username.trim() || !password}
               >
-                {save.isPending ? "Salvando…" : "Salvar no cofre"}
+                {isSaving ? "Salvando…" : "Salvar no cofre"}
               </Button>
             </div>
-            {save.error ? (
+            {saveFailed ? (
               <p className="mt-3 text-destructive text-sm" role="alert">
                 Não foi possível salvar. Verifique os dados e tente novamente.
               </p>
