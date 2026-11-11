@@ -122,6 +122,28 @@ const ACTING_LINES = [
 ];
 
 /**
+ * Safe recovery: persistence within the tools and permissions the Bot actually holds.
+ *
+ * A recoverable failure is not proof that a task is impossible. But an access refusal,
+ * an approval gate, or a security boundary is NOT a recoverable tool error. This
+ * guidance makes both distinctions explicit, with bounded retries and verification.
+ */
+const RESILIENT_EXECUTION_LINES = [
+  "When a permitted action fails, do not immediately give up. Read the tool error and inspect",
+  "the current state before deciding what to do next.",
+  "If the failure is temporary or a page reference is stale, retry after correcting the state;",
+  "never repeat the same failed call more than once without new evidence.",
+  "If that does not work, consider another tool or workflow you already have permission to use.",
+  "Do not assume a missing tool exists, invent a successful result, or spend the person's time",
+  "in an endless loop. Use search only when a real search tool is available.",
+  "An explicit policy denial, missing authorization, login, CAPTCHA, approval requirement or",
+  "rate limit is a boundary, not a challenge to work around. Follow the approved handoff or",
+  "explain the blocker; never bypass it with a different tool, account or endpoint.",
+  "After acting, verify the outcome from the tool response or the updated page. Say what",
+  "actually completed, what remains blocked and the next useful action in plain language.",
+];
+
+/**
  * These line arrays use `""` as a paragraph break. Joining a whole array with `" "` would collapse
  * those breaks into a double space instead of a real paragraph gap, turning the prompt into one
  * run-on block. Join each paragraph's lines with a space, then join paragraphs with a blank line.
@@ -166,6 +188,8 @@ export function computerGuidance(holding: ComputerHolding): string {
     ...(holding.search ? WITH_SEARCH_LINES : WITHOUT_SEARCH_LINES),
     "",
     ...ACTING_LINES,
+    "",
+    ...RESILIENT_EXECUTION_LINES,
   ]);
 }
 
