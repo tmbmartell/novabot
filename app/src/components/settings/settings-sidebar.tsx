@@ -67,8 +67,8 @@ export const SETTINGS_SIDEBAR_ITEMS: {
     linkOptions: { to: "/settings/learning" },
   },
   {
-    /* Logins saved from a Bot's private sign-in form. */
-    title: "Senhas",
+    /* User-managed encrypted Vault, including independently saved logins. */
+    title: "Cofre de senhas",
     icon: IconKey,
     linkOptions: { to: "/settings/passwords" },
   },
