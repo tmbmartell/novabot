@@ -5,6 +5,7 @@ import {
   IconPlug,
   IconSettings,
   IconShieldLock,
+  IconLock,
 } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { currentUserQueryOptions } from "@/lib/auth/queries";
@@ -25,9 +26,9 @@ import { currentUserQueryOptions } from "@/lib/auth/queries";
  * a tab, so it stays lit on both of its tabs.
  */
 export type NavigationItem = {
-  id: "bots" | "capabilities" | "connections" | "admin" | "settings";
+  id: "bots" | "capabilities" | "connections" | "vault" | "admin" | "settings";
   label: string;
-  to: "/bots" | "/capabilities" | "/connections" | "/admin" | "/settings";
+  to: "/bots" | "/capabilities" | "/connections" | "/settings/passwords" | "/admin" | "/settings";
   icon: Icon;
   section: "primary" | "account";
   /** Admin routes are guarded on the server; the entry is hidden from people who cannot open them. */
@@ -54,6 +55,13 @@ export const NAVIGATION: readonly NavigationItem[] = [
     label: "Conexões",
     to: "/connections",
     icon: IconPlug,
+    section: "primary",
+  },
+  {
+    id: "vault",
+    label: "Cofre",
+    to: "/settings/passwords",
+    icon: IconLock,
     section: "primary",
   },
   {
