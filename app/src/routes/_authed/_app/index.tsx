@@ -1,3 +1,4 @@
+import { IconKey, IconPlug, IconRobot } from "@tabler/icons-react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
@@ -100,6 +101,42 @@ function RouteComponent() {
             pending={pending}
           />
         </div>
+        <nav
+          className="mt-6 grid w-full grid-cols-1 gap-3 text-left sm:grid-cols-3"
+          aria-label="Acesso rápido às ferramentas"
+        >
+          <Link
+            to="/bots"
+            search={{ new: true }}
+            className="group rounded-2xl border border-[#303037] bg-[#1d1d22] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#1e7bff] hover:bg-[#25252d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1e7bff]"
+          >
+            <IconRobot className="mb-3 size-6 text-[#66a0ff]" aria-hidden="true" />
+            <span className="block text-sm font-semibold text-[#f6f6f8]">Novo agente</span>
+            <span className="mt-1 block text-xs leading-5 text-[#b4b4bd]">
+              Crie seu próximo especialista.
+            </span>
+          </Link>
+          <Link
+            to="/connections"
+            className="group rounded-2xl border border-[#303037] bg-[#1d1d22] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#1e7bff] hover:bg-[#25252d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1e7bff]"
+          >
+            <IconPlug className="mb-3 size-6 text-[#66a0ff]" aria-hidden="true" />
+            <span className="block text-sm font-semibold text-[#f6f6f8]">Conexões</span>
+            <span className="mt-1 block text-xs leading-5 text-[#b4b4bd]">
+              Autorize apps e ferramentas.
+            </span>
+          </Link>
+          <Link
+            to="/settings/passwords"
+            className="group rounded-2xl border border-[#303037] bg-[#1d1d22] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-[#1e7bff] hover:bg-[#25252d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1e7bff]"
+          >
+            <IconKey className="mb-3 size-6 text-[#66a0ff]" aria-hidden="true" />
+            <span className="block text-sm font-semibold text-[#f6f6f8]">Cofre de senhas</span>
+            <span className="mt-1 block text-xs leading-5 text-[#b4b4bd]">
+              Guarde acessos com segurança.
+            </span>
+          </Link>
+        </nav>
         {fallback ? (
           <p className="mt-4 text-xs text-muted-foreground">
             O NovaBot pode escolher o agente mais adequado. Use <code>@</code>{" "}
