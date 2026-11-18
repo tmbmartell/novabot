@@ -47,21 +47,20 @@ function RouteComponent() {
   }
 
   return (
-    // One viewport, never scrolls: panes scroll inside it. A growable shell lets the transcript's
-    // scroller size against the page, grow it, and grow again.
     <>
-    <SidebarShell
-      className="novagente-chat-shell dark h-dvh overflow-hidden"
-      width="340px"
-    >
-      <AppSidebar />
-      <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <SelfHostBanner />
-        <PwaInstallBar />
-        <Outlet />
-      </main>
-    </SidebarShell>
-    <NoviAssistant />
+      {/* One viewport, never scrolls: panes scroll inside it. */}
+      <SidebarShell
+        className="novagente-chat-shell dark h-dvh overflow-hidden"
+        width="340px"
+      >
+        <AppSidebar />
+        <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <SelfHostBanner />
+          <PwaInstallBar />
+          <Outlet />
+        </main>
+      </SidebarShell>
+      <NoviAssistant />
     </>
   );
 }
